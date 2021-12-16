@@ -1,0 +1,203 @@
+
+
+<br/>
+
+
+```{r message=FALSE}
+# 사용할 패키지를 추가한다.
+
+library(ggplot2)
+library(dplyr)
+library(tidyr)
+library(ggmap)
+library(tmaptools)
+library(raster)
+library(rgdal)
+library(clValid)
+
+```
+
+```{r graph1, message=FALSE, warning=FALSE}
+options(scipen=999)
+
+### 버스정류장 clustering
+
+bus <- read.csv("제주특별자치도_버스정류소현황.csv")
+bus <-bus[c(3:4)]
+head(bus)
+
+
+# # 최적 k 찾기
+# 
+# b_clvalid <- clValid(bus, 2:20, clMethods="kmeans", validation="internal", maxitems=nrow(bus))
+# summary(b_clvalid)
+
+
+# 위도, 경도 정보
+bbox <- c(left=min(bus$경도)-0.05, right=max(bus$경도)+0.05, bottom=min(bus$위도)-0.02, top=max(bus$위도)+0.02)
+
+# 지도 불러오기
+map <- get_stamenmap(bbox, zoom=12)
+
+# k=10, 10-means clusterig
+
+b_kmeans <- kmeans(bus,10)
+
+map_bus <- ggmap(map, base_layer=ggplot(bus, aes(x=경도, y=위도), col=b_kmean$cluster))+theme_void()+geom_point(color=b_kmeans$cluster, size=1.5)
+
+map_bus.cluster <- map_bus+geom_point(aes(x=경도, y=위도), data=as.data.frame(b_kmeans$centers),color="blue", fill="blue", size=3)
+
+print(map_bus.cluster)
+
+center <- b_kmeans$centers
+center
+
+
+```
+
+<br/>
+```{r graph2, message=FALSE, warning=FALSE}
+
+### 인구수 map
+
+popul <- read.csv("인구.csv")
+popul <-popul[c(4:5)]
+popul <- head(popul,10)
+
+
+pop_bbox <- c(left = 126.08, right=127, bottom=33.1, top=33.6)
+p_map <- get_stamenmap(bbox=pop_bbox, zoom=11, maptype="terrain")
+
+map_pop <- ggmap(p_map, base_layer=ggplot(popul, aes(x=경도, y=위도)))+theme_void()+geom_point(color="blue", size=3)
+
+print(map_pop)
+
+center <-rbind(center,popul)
+center
+
+```
+<br/>
+
+```{r graph3, message=FALSE, warning=FALSE}
+
+### 유동인구수 map
+
+mpopul <- read.csv("유동인구.csv")
+mpopul <-mpopul[c(6:7)]
+mpopul <- head(mpopul,10)
+
+
+mpop_bbox <- c(left = 126.08, right=127, bottom=33.1, top=33.6)
+mp_map <- get_stamenmap(bbox=mpop_bbox, zoom=11, maptype="terrain")
+
+map_mpop <- ggmap(mp_map, base_layer=ggplot(mpopul, aes(x=경도, y=위도)))+theme_void()+geom_point(color="blue", size=3)
+
+print(map_mpop)
+
+center <-rbind(center,mpopul)
+center
+
+
+```
+<br/>
+
+
+```{r graph4, message=FALSE, warning=FALSE}
+
+### 주요장소 최적 k 찾기
+
+place <- read.csv("주요장소.csv")
+place <-place[c(1:2)]
+
+
+
+# 주요장소 clustering
+
+# 위도, 경도 정보
+pl_bbox <- c(left=min(place$경도)-0.05, right=max(place$경도)+0.05, bottom=min(place$위도)-0.02, top=max(place$위도)+0.02)
+
+# 지도 불러오기
+pmap <- get_stamenmap(pl_bbox, zoom=12)
+
+# k=10, 10-means clusterig
+
+pl_kmeans <- kmeans(place,10)
+
+map_pl <- ggmap(pmap, base_layer=ggplot(place, aes(x=경도, y=위도), col=pl_kmean$cluster))+theme_void()+geom_point(color=pl_kmeans$cluster, size=1.5)
+
+map_pl.cluster <- map_pl+geom_point(aes(x=경도, y=위도), data=as.data.frame(pl_kmeans$centers),color="blue", fill="blue", size=3)
+
+print(map_pl.cluster)
+
+center <-rbind(center, pl_kmeans$centers)
+center
+
+
+```
+<br/>
+
+```{r graph5, message=FALSE, warning=FALSE}
+
+### 교통량 clustering
+
+car <- read.csv("교통량.csv")
+car <-car[c(13:14)]
+
+
+
+# 위도, 경도 정보
+c_bbox <- c(left=min(car$경도)-0.05, right=max(car$경도)+0.05, bottom=min(car$위도)-0.02, top=max(car$위도)+0.02)
+
+# 지도 불러오기
+cmap <- get_stamenmap(c_bbox, zoom=12)
+
+# k=10, 10-means clusterig
+
+c_kmeans <- kmeans(car,10)
+
+map_c <- ggmap(cmap, base_layer=ggplot(car, aes(x=경도, y=위도), col=c_kmean$cluster))+theme_void()+geom_point(color=c_kmeans$cluster, size=1.5)
+
+map_c.cluster <- map_c+geom_point(aes(x=경도, y=위도), data=as.data.frame(c_kmeans$centers),color="blue", fill="blue", size=3)
+
+print(map_c.cluster)
+
+center <-rbind(center, c_kmeans$centers)
+center
+
+```
+<br/>
+
+```{r graph6, message=FALSE, warning=FALSE}
+options(scipen=999)
+
+### 각 센터들을 다시 clustering
+
+center
+
+# 최적 k 찾기
+
+ct_clvalid <- clValid(center, 2:8, clMethods="kmeans", validation="internal", maxitems=nrow(center))
+summary(ct_clvalid)
+
+
+# 위도, 경도 정
+
+ct_bbox <- c(left = 126.08, right=127, bottom=33.1, top=33.6)
+ctmap <- get_stamenmap(bbox=ct_bbox, zoom=11, maptype="terrain")
+
+
+# k=4, 4-means clusterig
+
+ct_kmeans <- kmeans(center,4)
+
+map_ct <- ggmap(ctmap, base_layer=ggplot(center, aes(x=경도, y=위도), col=ct_kmean$cluster))+theme_void()+geom_point(color=ct_kmeans$cluster, size=1.5)
+
+
+map_ct.cluster <- map_ct+geom_point(aes(x=경도, y=위도), data=as.data.frame(ct_kmeans$centers),color="blue", fill="blue", size=3)
+
+print(map_ct.cluster)
+
+ct_kmeans$centers
+```
+
+<br/>
